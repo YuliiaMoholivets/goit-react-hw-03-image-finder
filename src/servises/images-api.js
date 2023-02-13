@@ -5,17 +5,18 @@ function fetchImages(keyWord, page) {
     if (!response.ok) {
       return Promise.reject(new Error(`No images for keyword ${keyWord}`));
     }
-    const getNormalazedImages = images =>
-      images.map(({ id, webformatURL, largeImageURL }) => ({
-        id,
-        webformatURL,
-        largeImageURL,
-      }));
-    return response.json().then(({ getNormalazedImages, totalHits }) => ({
-      images: getNormalazedImages,
+
+    return response.json().then(({ hits, totalHits }) => ({
+      images: getNormalazedImages(hits),
       totalImages: totalHits,
     }));
   });
 }
 
 export default fetchImages;
+const getNormalazedImages = images =>
+  images.map(({ id, webformatURL, largeImageURL }) => ({
+    id,
+    webformatURL,
+    largeImageURL,
+  }));
