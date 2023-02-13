@@ -11,7 +11,7 @@ export default class App extends Component {
     images: [],
     searchWord: '',
     pageNumber: 1,
-    pageTotal: '',
+    totalImages: 0,
     status: '',
   };
 
@@ -22,102 +22,68 @@ export default class App extends Component {
     const prevPage = prevState.pageNumber;
     const nextPage = pageNumber;
 
-    if (prevWord !== nextWord) {
+    if (prevWord !== nextWord || prevPage !== nextPage) {
       this.setState({ status: 'LOADING' });
       const newImage = fetchImages(nextWord, pageNumber);
-      newImage
-        .then(data => {
-          if (data.total === 0) {
-            this.setState({ status: 'ERROR' });
-          } else {
-            const newData = data.hits.map(
-              ({ id, webformatURL, largeImageURL }) => ({
-                id,
-                webformatURL,
-                largeImageURL,
-              })
-            );
-            this.setState({
-              images: newData,
-              status: 'OK',
-              pageTotal: data.totalHits,
-            });
-          }
-        })
-        .catch(() => {
+      newImage.then(({ totalImages, images }) => {
+        if (totalImages === 0) {
           this.setState({ status: 'ERROR' });
-        });
-    }
-
-    if (prevPage !== nextPage && prevWord === nextWord) {
-      this.setState({ status: 'LOADING' });
-      const newImage = fetchImages(nextWord, pageNumber);
-      newImage
-        .then(data => {
-          const newData = data.hits.map(
-            ({ id, webformatURL, largeImageURL }) => ({
-              id,
-              webformatURL,
-              largeImageURL,
-            })
-          );
+        } else {
           this.setState(prevState => ({
             images: [...prevState.images, ...newData],
             status: 'OK',
-          }));
-        })
-        .catch(() => {
-          this.setState({ status: 'ERROR' });
-        });
-    }
-  }
+            totalImages,
+          }))
+        
+            .catch(() => {
+              this.setState({ status: 'ERROR' });
+       
+            });
+        }
+      },
+    
 
-  formSubmitHandler = ({ keyWord }) => {
-    const { searchWord } = this.state;
-    if (searchWord !== keyWord) {
-      this.setState({ searchWord: keyWord, pageNumber: 1, images: [] });
-    } else {
-      this.setState({ searchWord: keyWord });
-    }
-  };
+   
+        formSubmitHandler = ({ keyWord }) => {
+          const { searchWord } = this.state;
+          if (searchWord !== keyWord) {
+            this.setState({ searchWord: keyWord, pageNumber: 1, images: [] });
+          }
+        },
 
-  handleIncrement = () => {
-    this.setState(prevState => ({ pageNumber: prevState.pageNumber + 1 }));
-  };
+        handleIncrement = () => {
+          this.setState(prevState => ({ pageNumber: prevState.pageNumber + 1 }));
+        },
 
-  lastPageDef = () => {
-    const { pageTotal } = this.state;
-    let lastPage = Number(pageTotal % 12);
-    if (lastPage === 0) {
-      return (lastPage = Number(pageTotal / 12));
-    } else {
-      return (lastPage = Number.parseInt(pageTotal / 12) + 1);
-    }
-  };
+ 
+        render(){
+          const { status, searchWord, images, pageNumber, totalImages } = this.state;
+          const lastPage = this.lastPageDef();
 
-  render() {
-    const { status, searchWord, images, pageNumber, pageTotal } = this.state;
-    const lastPage = this.lastPageDef();
-
-    return (
-      <Container>
-        <Searchbar onSubmit={this.formSubmitHandler} />
-        <ImageGallery data={images} onClose={this.toggleModal} />
-        {status === 'ERROR' && (
+          return(
+            <Container>
+      <Searchbar onSubmit={this.formSubmitHandler} />
+              { images.length > 0 && <ImageGallery data={images} onClose={this.toggleModal} /> }
+              { status === 'ERROR' && (
           <ErrorMessage>No images for keyword "{searchWord}"</ErrorMessage>
         )}
-        {status === 'LOADING' && <Loader />}
-        {status === 'OK' && images.length > 11 && pageNumber !== lastPage && (
-          <Button
-            text={'Load more'}
-            type="button"
-            onClick={this.handleIncrement}
-          />
-        )}
-        {pageNumber === lastPage && pageTotal > 0 && (
-          <ErrorMessage>You've reached the end of search results.</ErrorMessage>
-        )}
-      </Container>
-    );
-  }
+    { status === 'LOADING' && <Loader /> }
+    {
+      status === 'OK' && images.length > totalImages && (
+        <Button
+          text={'Load more'}
+          type="button"
+          onClick={this.handleIncrement}
+        />
+      )
+    }
+    {
+      pageNumber === lastPage && totalImages > 0 && (
+        <ErrorMessage>You've reached the end of search results.</ErrorMessage>
+      )
+    }
+            </Container >
+          )
+  };
 }
+
